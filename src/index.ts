@@ -3,7 +3,7 @@ import { Options } from './types.d'
 import { context } from '@actions/github'
 import { createComment } from './create-comment'
 import { getJunitReport } from './junit'
-import { getCoverageReport } from './coverage'
+import { getCoverageReport, getMultipleCoverageReport } from './coverage'
 import { getSummaryReport } from './summary'
 import { getChangedFiles } from './changed-files'
 import { getMultipleReport } from './multi-files'
@@ -52,6 +52,12 @@ async function main(): Promise<void> {
     const multipleFiles = core.getMultilineInput('multiple-files', {
       required: false,
     })
+    const multipleCoverageFiles = core.getMultilineInput(
+      'multiple-coverage-files',
+      {
+        required: false,
+      }
+    )
     const multipleJunitFiles = core.getMultilineInput(
       'multiple-junitxml-files',
       { required: false }
@@ -94,6 +100,7 @@ async function main(): Promise<void> {
       hideComment,
       reportOnlyChangedFiles,
       multipleFiles,
+      multipleCoverageFiles,
       multipleJunitFiles,
     }
 
@@ -116,27 +123,29 @@ async function main(): Promise<void> {
       }
     }
 
-    const report = getSummaryReport(options)
-    const { coverage, color, summaryHtml } = report
+    if (!options.hideSummary && options.multipleCoverageFiles === undefined) {
+      const report = getSummaryReport(options)
+      const { coverage, color, summaryHtml } = report
 
-    if (coverage || summaryHtml) {
-      core.startGroup(options.summaryTitle || 'Summary')
-      core.info(`coverage: ${coverage}`)
-      core.info(`color: ${color}`)
-      core.info(`summaryHtml: ${summaryHtml}`)
+      if (coverage || summaryHtml) {
+        core.startGroup(options.summaryTitle || 'Summary')
+        core.info(`coverage: ${coverage}`)
+        core.info(`color: ${color}`)
+        core.info(`summaryHtml: ${summaryHtml}`)
 
-      core.setOutput('coverage', coverage)
-      core.setOutput('color', color)
-      core.setOutput('summaryHtml', summaryHtml)
-      core.endGroup()
+        core.setOutput('coverage', coverage)
+        core.setOutput('color', color)
+        core.setOutput('summaryHtml', summaryHtml)
+        core.endGroup()
+      }
+
+      if (!options.hideSummary) {
+        finalHtml += summaryHtml
+      }
     }
 
     if (title) {
       finalHtml += `# ${title}\n\n`
-    }
-
-    if (!options.hideSummary) {
-      finalHtml += summaryHtml
     }
 
     if (options.junitFile) {
@@ -163,7 +172,15 @@ async function main(): Promise<void> {
       }
     }
 
-    if (options.coverageFile) {
+    core.warning('pre if statement')
+    if (options.multipleCoverageFiles) {
+      core.warning('in if statement')
+      const coverageHtml = getMultipleCoverageReport(options)
+      core.warning(String(coverageHtml))
+      finalHtml += coverageHtml ? `\n\n${coverageHtml}` : ''
+    }
+
+    if (options.coverageFile && !options.multipleCoverageFiles) {
       const coverageReport = getCoverageReport(options)
       const {
         coverageHtml,
