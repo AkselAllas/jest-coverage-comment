@@ -24,6 +24,7 @@ export interface Options {
   reportOnlyChangedFiles?: boolean
   changedFiles?: ChangedFiles | null
   multipleFiles?: string[]
+  multipleCoverageFiles?: string[]
   multipleJunitFiles?: string[]
 }
 
@@ -85,6 +86,11 @@ export interface CoverageLine {
   uncoveredLines: string[] | null
 }
 
+export interface CoverageLinePair {
+  line: CoverageLine
+  diff: CoverageLine
+}
+
 export interface CoverageReport {
   coverageHtml: string
   coverage: number
@@ -98,4 +104,9 @@ export interface CoverageReport {
 export interface MultipleFilesLine {
   title: string
   file: string
+}
+
+export interface MultipleCoverageFilesLine {
+  coverageFile: string
+  diffFile: string
 }

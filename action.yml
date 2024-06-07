@@ -17,7 +17,7 @@ inputs:
 
   coverage-summary-path:
     description: 'The location of the coverage-summary of Jest'
-    default: './coverage/coverage-summary.json'
+    default: './main/packages/logger/coverage/coverage-summary.json'
     required: false
 
   summary-title:
@@ -89,6 +89,12 @@ inputs:
     description: >
       You can pass array of `json-summary.json` files and generate single comment with table of results
       Single line should look like `Title1, ./path/to/json-summary.json`
+    default: ''
+    required: false
+
+  multiple-coverage-files:
+    description: >
+      Single line should look like `./path/to/coverage.txt, ./path/to/diff-coverage.txt`
     default: ''
     required: false
 

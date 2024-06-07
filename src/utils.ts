@@ -1,6 +1,10 @@
 import * as core from '@actions/core'
 import { existsSync, readFileSync } from 'fs'
-import { CoverageColor, MultipleFilesLine } from './types'
+import {
+  CoverageColor,
+  MultipleCoverageFilesLine,
+  MultipleFilesLine,
+} from './types'
 
 export function getPathToFile(pathToFile: string): string {
   if (!pathToFile) {
@@ -80,6 +84,18 @@ export const parseLine = (line: string): MultipleFilesLine | null => {
 
   const lineArr = line.split(',')
   return { title: lineArr[0].trim(), file: lineArr[1].trim() }
+}
+
+/** Parse one-line from multiple files to object. */
+export const parseLineMultiCoverage = (
+  line: string
+): MultipleCoverageFilesLine | null => {
+  if (!line.includes(',')) {
+    return null
+  }
+
+  const lineArr = line.split(',')
+  return { coverageFile: lineArr[0].trim(), diffFile: lineArr[1].trim() }
 }
 
 /** Helper function to filter null entries out of an array. */
