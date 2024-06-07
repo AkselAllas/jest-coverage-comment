@@ -1,6 +1,16 @@
 import * as core from '@actions/core'
-import { CoverageLine, CoverageReport, Options } from './types.d'
-import { getContentFile, getCoverageColor } from './utils'
+import {
+  CoverageLine,
+  CoverageLinePair,
+  CoverageReport,
+  Options,
+} from './types.d'
+import {
+  getContentFile,
+  getCoverageColor,
+  notNull,
+  parseLineMultiCoverage,
+} from './utils'
 import { parseCoverage, getTotalLine, isFile, isFolder } from './parse-coverage'
 
 const DEFAULT_COVERAGE: Omit<CoverageReport, 'coverageHtml'> = {
@@ -15,12 +25,15 @@ const DEFAULT_COVERAGE: Omit<CoverageReport, 'coverageHtml'> = {
 /** Convert coverage to md. */
 function coverageToMarkdown(
   coverageArr: CoverageLine[],
-  options: Options
+  options: Options,
+  diffArr?: CoverageLine[]
 ): string {
   const { reportOnlyChangedFiles, coverageTitle } = options
   const { coverage } = getCoverage(coverageArr)
 
-  const table = toTable(coverageArr, options)
+  const table = diffArr
+    ? toDiffTable(coverageArr, options, diffArr)
+    : toTable(coverageArr, options)
   const onlyChanged = reportOnlyChangedFiles ? '• ' : ''
   const reportHtml = `<details><summary>${coverageTitle} ${onlyChanged}(<b>${coverage}%</b>)</summary>${table}</details>`
 
@@ -52,6 +65,32 @@ function getCoverage(
     statements,
     lines: coverage,
   }
+}
+
+/** Make html table from coverage.txt. */
+function toDiffTable(
+  coverageArr: CoverageLine[],
+  options: Options,
+  diffArr: CoverageLine[]
+): string {
+  const headTr = toHeadRow()
+
+  const totalRow = getTotalLine(coverageArr)
+  const diffTotalRow = getTotalLine(diffArr)
+  const totalTr = toDiffTotalRow(totalRow, diffTotalRow)
+
+  const folders = makeDiffFolders(coverageArr, options, diffArr)
+  const rows = [totalTr]
+
+  for (const key of Object.keys(folders)) {
+    const files = folders[key].map(({ line, diff }) =>
+      toDiffRow(line, isFile(line), options, diff)
+    )
+    rows.push(...files)
+  }
+
+  // prettier-ignore
+  return `<table>${headTr}<tbody>${rows.join('')}</tbody></table>`
 }
 
 /** Make html table from coverage.txt. */
@@ -102,6 +141,41 @@ function toHeadRow(): string {
 }
 
 /** Make html row - tr. */
+function toDiffRow(
+  line: CoverageLine,
+  indent = false,
+  options: Options,
+  diff: CoverageLine
+): string {
+  const { stmts, branch, funcs, lines } = line
+  const {
+    stmts: diffStmts,
+    branch: diffBranch,
+    funcs: diffFuncs,
+    lines: diffLines,
+  } = diff
+
+  const fileName = toFileNameTd(line, indent, options)
+  const missing = toMissingTd(line, options)
+
+  return `<tr><td>${
+    isFolder(line) ? line.file : fileName
+  }</td><td>${stmts} (${getDifference(
+    stmts,
+    diffStmts
+  )})</td><td>${branch} (${getDifference(
+    branch,
+    diffBranch
+  )})</td><td>${funcs} (${getDifference(
+    funcs,
+    diffFuncs
+  )})</td><td>${lines} (${getDifference(
+    lines,
+    diffLines
+  )})</td><td>${missing}</td></tr>`
+}
+
+/** Make html row - tr. */
 function toRow(line: CoverageLine, indent = false, options: Options): string {
   const { stmts, branch, funcs, lines } = line
 
@@ -111,6 +185,51 @@ function toRow(line: CoverageLine, indent = false, options: Options): string {
   return `<tr><td>${
     isFolder(line) ? line.file : fileName
   }</td><td>${stmts}</td><td>${branch}</td><td>${funcs}</td><td>${lines}</td><td>${missing}</td></tr>`
+}
+
+const getDifference = (curr: number, prev: number): string => {
+  try {
+    const differenceValue = Math.round(curr - prev)
+    if (differenceValue === 0) return `~${differenceValue}`
+    else if (differenceValue > 0) return `+${differenceValue}`
+    return `${differenceValue}`
+  } catch (e) {
+    return '~'
+  }
+}
+
+/** Make summary row - tr. */
+function toDiffTotalRow(
+  line: CoverageLine | undefined,
+  diffLine: CoverageLine | undefined
+): string {
+  if (!line) {
+    return '&nbsp;'
+  }
+  if (!diffLine) {
+    return '&nbsp;'
+  }
+
+  const { file, stmts, branch, funcs, lines } = line
+  const {
+    stmts: diffStmts,
+    branch: diffBranch,
+    funcs: diffFuncs,
+    lines: diffLines,
+  } = diffLine
+  return `<tr><td><b>${file}</b></td><td><b>${stmts} (${getDifference(
+    stmts,
+    diffStmts
+  )})</b></td><td><b>${branch} (${getDifference(
+    branch,
+    diffBranch
+  )})</b></td><td><b>${funcs} (${getDifference(
+    funcs,
+    diffFuncs
+  )})</b></td><td><b>${lines} (${getDifference(
+    lines,
+    diffLines
+  )})</b></td><td>&nbsp;</td></tr>`
 }
 
 /** Make summary row - tr. */
@@ -174,6 +293,31 @@ function toMissingTd(line: CoverageLine, options: Options): string {
     .join(', ')
 }
 
+function makeDiffFolders(
+  coverageArr: CoverageLine[],
+  options: Options,
+  diffArr: CoverageLine[]
+): { [key: string]: CoverageLinePair[] } {
+  const folders: { [key: string]: CoverageLinePair[] } = {}
+
+  for (const { index, line } of coverageArr.map((value, idx) => ({
+    index: idx,
+    line: value,
+  }))) {
+    const diff = diffArr[index]
+    if (line.file === 'All files') {
+      continue
+    }
+    const parts = line.file.replace(options.prefix, '').split('/')
+    const folder = isFile(line) ? parts.slice(0, -1).join('/') : line.file
+
+    folders[folder] = folders[folder] || []
+    folders[folder].push({ line, diff })
+  }
+
+  return folders
+}
+
 /** Collapse all lines to folders structure. */
 function makeFolders(
   coverageArr: CoverageLine[],
@@ -193,6 +337,38 @@ function makeFolders(
   }
 
   return folders
+}
+
+/** Return full html coverage report and coverage percentage. */
+export function getMultipleCoverageReport(options: Options): String {
+  const { multipleCoverageFiles } = options
+
+  let coverageHtml = ''
+  try {
+    if (!multipleCoverageFiles) {
+      return ''
+    }
+    const mappedArray = multipleCoverageFiles
+      .map(parseLineMultiCoverage)
+      .filter(notNull)
+
+    for (const titleFileLine of mappedArray) {
+      const { coverageFile, diffFile } = titleFileLine
+
+      const coverageContent = getContentFile(coverageFile)
+      const coverageArr = parseCoverage(coverageContent)
+
+      const diffContent = getContentFile(diffFile)
+      const diffArr = parseCoverage(diffContent)
+      coverageHtml += coverageToMarkdown(coverageArr, options, diffArr)
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      core.error(`Generating coverage report. ${error.message}`)
+    }
+  }
+
+  return coverageHtml
 }
 
 /** Return full html coverage report and coverage percentage. */
