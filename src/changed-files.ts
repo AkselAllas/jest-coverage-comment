@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { context, getOctokit } from '@actions/github'
+import { getOctokit } from '@actions/github'
 import { ChangedFiles, Options } from './types.d'
 
 /** Generate object of all files that changed based on commit through GitHub API. */
@@ -14,6 +14,40 @@ export async function getChangedFiles(
   const addedOrModified: string[] = []
 
   try {
+    const context = {
+      payload: {
+        after: '',
+        before: '',
+        pull_request: {
+          number: 1,
+          head: {
+            sha: '',
+            ref: '',
+          },
+          base: {
+            sha: '',
+            ref: '',
+          },
+        },
+      },
+      eventName: 'push',
+      sha: '',
+      repo: {
+        repo: '',
+        owner: '',
+      },
+      owner: '',
+      ref: 'refs/heads/my_branch',
+      workflow: 'github',
+      action: 'github_step',
+      actor: 'github_step',
+      job: 'dump_contexts_to_log',
+      runnumber: 1,
+      runid: 1,
+      apiurl: 'https://api.github.com',
+      serverUrl: 'https://github.com',
+      graphqlurl: 'https://api.github.com/graphql',
+    }
     const { eventName, payload } = context
     const { repo, owner } = context.repo
     const octokit = getOctokit(options.token)

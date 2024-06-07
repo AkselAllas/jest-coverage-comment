@@ -7,7 +7,7 @@
       "request": "launch",
       "skipFiles": ["<node_internals>/**"],
       "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/cli.ts"]
+      "args": ["${workspaceFolder}/src/index.ts"]
     }
   ]
 }

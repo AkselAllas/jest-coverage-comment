@@ -1,6 +1,5 @@
 import * as core from '@actions/core'
 import { Options } from './types.d'
-import { context } from '@actions/github'
 import { createComment } from './create-comment'
 import { getJunitReport } from './junit'
 import { getCoverageReport, getMultipleCoverageReport } from './coverage'
@@ -11,61 +10,63 @@ import { getMultipleJunitReport } from './multi-junit-files'
 
 async function main(): Promise<void> {
   try {
-    const token = core.getInput('github-token', { required: true })
-
-    const title = core.getInput('title', { required: false })
-    const badgeTitle = core.getInput('badge-title', { required: false })
-    const hideSummary = core.getBooleanInput('hide-summary', {
-      required: false,
-    })
-    const removeLinksToFiles = core.getBooleanInput('remove-links-to-files', {
-      required: false,
-    })
-    const removeLinksToLines = core.getBooleanInput('remove-links-to-lines', {
-      required: false,
-    })
-    const summaryTitle = core.getInput('summary-title', { required: false })
-    const summaryFile = core.getInput('coverage-summary-path', {
-      required: false,
-    })
-    const junitTitle = core.getInput('junitxml-title', { required: false })
-    const junitFile = core.getInput('junitxml-path', {
-      required: false,
-    })
-    const coverageTitle = core.getInput('coverage-title', { required: false })
-    const coverageFile = core.getInput('coverage-path', {
-      required: false,
-    })
-    const coveragePathPrefix = core.getInput('coverage-path-prefix', {
-      required: false,
-    })
-    const createNewComment = core.getBooleanInput('create-new-comment', {
-      required: false,
-    })
-    const hideComment = core.getBooleanInput('hide-comment', {
-      required: false,
-    })
-    const reportOnlyChangedFiles = core.getBooleanInput(
-      'report-only-changed-files',
-      { required: false }
-    )
-    const multipleFiles = core.getMultilineInput('multiple-files', {
-      required: false,
-    })
-    const multipleCoverageFiles = core.getMultilineInput(
-      'multiple-coverage-files',
-      {
-        required: false,
-      }
-    )
-    const multipleJunitFiles = core.getMultilineInput(
-      'multiple-junitxml-files',
-      { required: false }
-    )
-    const uniqueIdForComment = core.getInput('unique-id-for-comment', {
-      required: false,
-    })
-
+    const token = ''
+    const title = 'test'
+    const badgeTitle = 'Coverage'
+    const hideSummary = true
+    const removeLinksToFiles = false
+    const removeLinksToLines = false
+    const summaryTitle = 'bla'
+    const summaryFile = './main/packages/logger/coverage/coverage-summary.json'
+    const junitTitle = ''
+    const junitFile = ''
+    const coverageTitle = 'bla'
+    const coverageFile = ''
+    const coveragePathPrefix = ''
+    const createNewComment = false
+    const hideComment = false
+    const reportOnlyChangedFiles = false
+    const multipleFiles = ['']
+    const multipleCoverageFiles = [
+      './main/packages/logger/coverage/coverage.txt, ./packages/logger/master-coverage.txt',
+    ]
+    const multipleJunitFiles = ['']
+    const uniqueIdForComment = ''
+    const context = {
+      /**
+       * webhook payload object that triggered the workflow
+       */
+      payload: {
+        after: '',
+        pull_request: {
+          head: {
+            sha: '',
+            ref: '',
+          },
+          base: {
+            sha: '',
+            ref: '',
+          },
+        },
+      },
+      eventName: 'push',
+      sha: '',
+      repo: {
+        repo: '',
+        owner: '',
+      },
+      owner: '',
+      ref: 'refs/heads/my_branch',
+      workflow: 'github',
+      action: 'github_step',
+      actor: 'github_step',
+      job: 'dump_contexts_to_log',
+      runnumber: 1,
+      runid: 1,
+      apiurl: 'https://api.github.com',
+      serverUrl: 'https://github.com',
+      graphqlurl: 'https://api.github.com/graphql',
+    }
     const serverUrl = context.serverUrl || 'https://github.com'
     core.info(`Uses Github URL: ${serverUrl}`)
 
